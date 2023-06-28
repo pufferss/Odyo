@@ -9,20 +9,26 @@ from tkinter.filedialog import asksaveasfilename
 
 def convert():
     try:
+        done.grid_forget()
+        print('ici')
         youtube = YouTube(url.get())
         errorMSG.grid_forget()
+        print('??')
 
         # 140 correspond au .mp4 audio seulement en 128kb/s
         video = youtube.streams.get_by_itag(140)
+        print('mec')
         global file_name
         global file_path
-
+        print('la')
         if not file_name:
             file_name = youtube.title
             for k in forbidden_chars:
                 file_name = file_name.replace(k, '')
             file_name += '.mp3'
+        print('blabla')
         video.download(output_path=file_path, filename=file_name)
+        print('ptet pas la')
         done.grid(column=1)
         file_name = ''
     except:
@@ -57,6 +63,11 @@ window.grid_rowconfigure(0, weight=1)
 window.grid_columnconfigure(0, weight=1)
 frm = ttk.Frame(window)
 frm.grid()
+
+
+pwd = os.getcwd()
+photo = PhotoImage(file = pwd + '/icon/odyo.png')
+window.iconphoto(True, photo)
 
 url = StringVar()
 file_path = str()
