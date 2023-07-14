@@ -5,30 +5,25 @@ import subprocess
 from tkinter import *
 from tkinter import ttk
 from tkinter.filedialog import asksaveasfilename
+import base64
 
 
 def convert():
     try:
         done.grid_forget()
-        print('ici')
         youtube = YouTube(url.get())
         errorMSG.grid_forget()
-        print('??')
 
         # 140 correspond au .mp4 audio seulement en 128kb/s
         video = youtube.streams.get_by_itag(140)
-        print('mec')
         global file_name
         global file_path
-        print('la')
         if not file_name:
             file_name = youtube.title
             for k in forbidden_chars:
                 file_name = file_name.replace(k, '')
             file_name += '.mp3'
-        print('blabla')
         video.download(output_path=file_path, filename=file_name)
-        print('ptet pas la')
         done.grid(column=1)
         file_name = ''
     except:
@@ -58,16 +53,14 @@ def checkOS():
 window = Tk()
 window.geometry('500x300')
 window.resizable(False, False)
-window.title('Youtube Downloader')
+window.title('ODYO Downloader')
+icon ='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'
+icon = PhotoImage(data=base64.b64decode(icon))
+window.wm_iconphoto(True, icon)
 window.grid_rowconfigure(0, weight=1)
 window.grid_columnconfigure(0, weight=1)
 frm = ttk.Frame(window)
 frm.grid()
-
-
-pwd = os.getcwd()
-photo = PhotoImage(file = pwd + '/icon/odyo.png')
-window.iconphoto(True, photo)
 
 url = StringVar()
 file_path = str()
