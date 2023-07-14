@@ -18,3 +18,5 @@ Note:
 - You cannot download private videos
 - You can't download playlist (for now)
 
+/!\ Warning
+- If your antivirus is Cynet, Windows Defender, McAfee, CrowdStrike Falcon or Trellix, Odyo will be detected as a virus so please turn off your antivirus to use Odyo.
