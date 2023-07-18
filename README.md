@@ -20,3 +20,6 @@ Note:
 
 /!\ Warning
 - If your antivirus is Cynet, Windows Defender, McAfee, CrowdStrike Falcon or Trellix, Odyo will be detected as a virus so please turn off your antivirus to use Odyo.
+
+Credits:
+- The twitter part was inspired by z1nc0r3's work on twitter-video-downloader.
