@@ -9,8 +9,11 @@ import base64
 import requests
 import re
 import ffmpeg
+from threading import Thread
 
-
+def func_thread():
+    th=Thread(target= lambda: convert(), daemon=True)
+    th.start()
 
 def convert():
     try:
@@ -189,7 +192,7 @@ label_path.grid(column=1, columnspan=3, pady=7)
 label_path.grid_rowconfigure(1, weight=1)
 label_path.grid_columnconfigure(1, weight=1)
 
-convertir = ttk.Button(frm, text='Convertir', command=convert, cursor='hand2')
+convertir = ttk.Button(frm, text='Convertir', command=func_thread, cursor='hand2')
 convertir.grid(column=1, columnspan=3)
 convertir.grid_rowconfigure(1, weight=1)
 convertir.grid_columnconfigure(1, weight=1)
