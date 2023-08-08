@@ -8,6 +8,8 @@ from tkinter.filedialog import asksaveasfilename
 import base64
 import requests
 import re
+import ffmpeg
+
 
 
 def convert():
@@ -18,21 +20,43 @@ def convert():
         global file_path
         if file_name.split('.')[-1] != extension.get().split('.')[-1] and file_name != '':
             file_name = file_name.split('.')[0] + extension.get()
-            print(file_name.split('.')[-1], extension.get().split('.')[-1])
+        print('fff')
         if re.search(".*yout.*", url.get()):
-            youtube = YouTube(url.get())
-
-            # 140 correspond au .mp4 audio seulement en 128kb/s
-            video = youtube.streams.get_by_itag(140)
+            print("youtube")
             
+            youtube = YouTube(url.get())
+            print('GROO')
             if not file_name:
                 file_name = youtube.title
                 for k in forbidden_chars:
                     file_name = file_name.replace(k, '')
                 file_name += extension.get()
-            video.download(output_path=file_path, filename=file_name)
+
+            if extension.get() == '.mp4':
+                video = youtube.streams.filter(adaptive=True, file_extension='mp4').first()
+                print(video)
+                if video.resolution != '1080p':
+                    video = youtube.streams.filter(progressive=True,file_extension='mp4').get_highest_resolution()
+                    video.download(output_path=file_path, filename=file_name)
+                else:
+                    video.download(output_path=file_path, filename='TEMP' + file_name)
+                    audio = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
+                    audio.download(output_path=file_path, filename=file_name.split('.')[0] + '.mp3')
+                    combine_files()
+
+                
+                print('apres')
+
+
+            elif extension.get() == '.mp3':
+                video = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
+
+            
+                video.download(output_path=file_path, filename=file_name)
+
 
         elif re.search(".*twitter.*", url.get()):
+            print("twiter")
             tweet_URL = url.get()
             tweet_ID = tweet_URL.split('/')[-1]
 
@@ -54,16 +78,40 @@ def convert():
             # opening a file handler to create new file
             with open(file_path + '/' + file_name, "wb") as f:
                 f.write(resp.content)  # writing content to file
-        
+
         else:
+            print('gros ya r')
             raise errorMSG.grid(column=1, columnspan=2)
         
         done.grid(column=1, columnspan=3)
         file_name = ''
     except:
+        print('ERREUR TOTAL')
         errorMSG.grid(column=1, columnspan=3)
+        try:
+            os.remove(file_path + '/' + 'TEMP' +file_name)
+            os.remove(file_path + '/' + file_name.split('.')[0] + '.mp3')
+        except:
+            return
+        file_name = ''
 
+def combine_files():
+    global file_name
+    global file_path
+    input_vid = ffmpeg.input(file_path + '/' + 'TEMP' +file_name)
+    input_aud = ffmpeg.input(file_path + '/' + file_name.split('.')[0] + '.mp3')
+    print("la")
+    ffmpeg.concat(input_vid, input_aud, v=1, a=1, unsafe= True)
+    
+    print('laaa')
+    ffmpeg.output(input_vid.video, input_aud.audio, file_path + '/' + file_name, codec='copy').overwrite_output().run(quiet=True)
 
+    print("on sais pas")
+
+    os.remove(file_path + '/' + 'TEMP' +file_name)
+    os.remove(file_path + '/' + file_name.split('.')[0] + '.mp3')
+    print('waw')
+    
 def savePath():
     global file_name
     global file_path
@@ -72,7 +120,6 @@ def savePath():
     if not path:
         return
     file_path, file_name = os.path.split(path)
-    print (file_name)
     label_path.config(text='Le fichier sera téléchargé vers: ' + file_path)
 
 
@@ -81,13 +128,14 @@ def checkOS():
     if operating_sys == 'Linux':
         file_path = str(subprocess.check_output(
             ['xdg-user-dir', 'DESKTOP']).decode('ascii')).rstrip()
+        print(file_path)
     elif operating_sys == 'Windows':
         file_path = 'C:/Users/' + user + '/Desktop'
     elif operating_sys == 'Darwin':
         file_path = '~/Desktop'
 
 
-window = Tk()
+window = Tk(className='Odyo Downloader')
 window.geometry('500x300')
 window.resizable(False, False)
 window.title('ODYO Downloader')
@@ -121,8 +169,9 @@ url_textbox.grid_rowconfigure(1, weight=1)
 url_textbox.grid_columnconfigure(1, weight=1)
 
 ext = StringVar()
-L_Extension= ['.mp3', '.mp4']
-extension = ttk.Combobox(frm, values=L_Extension, state="readonly", width='4', textvariable=ext)
+L_Extension = ['.mp3', '.mp4']
+extension = ttk.Combobox(frm, values=L_Extension,
+                         state="readonly", width='5', textvariable=ext)
 extension.current(1)
 extension.grid(column=3, row=1)
 extension.grid_rowconfigure(1, weight=1)
