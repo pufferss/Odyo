@@ -1,10 +1,10 @@
-WELCOME TO ODYO ! A PORTABLE YOUTUBE TO MP3 CONVERTER.
+WELCOME TO ODYO ! A PORTABLE YOUTUBE CONVERTER.
 
 
 Installation Guide:
 - Download the latest release on github
 - Extract the archive wherever you want
-- Launch Odyo.exe
+- Launch the executable file
 
 Manual:
 - Oydo works for the three main platforms: Linux, Windows and MacOS
@@ -20,6 +20,3 @@ Note:
 
 /!\ Warning
 - If your antivirus is Cynet, Windows Defender, McAfee, CrowdStrike Falcon or Trellix, Odyo will be detected as a virus so please turn off your antivirus to use Odyo.
-
-Credits:
-- The twitter part was inspired by z1nc0r3's work on twitter-video-downloader.
