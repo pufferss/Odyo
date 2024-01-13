@@ -6,7 +6,6 @@ from tkinter import *
 from tkinter import ttk
 from tkinter.filedialog import asksaveasfilename
 import base64
-import requests
 import re
 import ffmpeg
 from threading import Thread
@@ -23,12 +22,10 @@ def convert():
         global file_path
         if file_name.split('.')[-1] != extension.get().split('.')[-1] and file_name != '':
             file_name = file_name.split('.')[0] + extension.get()
-        print('fff')
         if re.search(".*yout.*", url.get()):
-            print("youtube")
             
             youtube = YouTube(url.get())
-            print('GROO')
+           
             if not file_name:
                 file_name = youtube.title
                 for k in forbidden_chars:
@@ -37,19 +34,14 @@ def convert():
 
             if extension.get() == '.mp4':
                 video = youtube.streams.filter(adaptive=True, file_extension='mp4').first()
-                print(video)
                 if video.resolution != '1080p':
                     video = youtube.streams.filter(progressive=True,file_extension='mp4').get_highest_resolution()
                     video.download(output_path=file_path, filename=file_name)
                 else:
                     video.download(output_path=file_path, filename='TEMP' + file_name)
                     audio = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
-                    audio.download(output_path=file_path, filename=file_name.split('.')[0] + '.mp3')
+                    audio.download(output_path=file_path, filename='TEMP' + file_name.split('.')[0] + '.mp3')
                     combine_files()
-
-                
-                print('apres')
-
 
             elif extension.get() == '.mp3':
                 video = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
@@ -57,37 +49,10 @@ def convert():
             
                 video.download(output_path=file_path, filename=file_name)
 
-
-        elif re.search(".*twitter.*", url.get()):
-            print("twiter")
-            tweet_URL = url.get()
-            tweet_ID = tweet_URL.split('/')[-1]
-
-            API = 'https://api.twitterpicker.com/tweet/mediav2?id=' + tweet_ID
-
-            get_API = requests.get(API)
-            data = get_API.json()
-
-            videos_list = data['media']['videos'][0]['variants']
-            highest_bitrate = max(
-                videos_list, key=lambda x: int(x.get('bitrate', 0) or 0))
-            video_URL = highest_bitrate['url']
-
-            if not file_name:
-                file_name = tweet_ID + extension.get()
-
-            resp = requests.get(video_URL)  # making requests to server
-
-            # opening a file handler to create new file
-            with open(file_path + '/' + file_name, "wb") as f:
-                f.write(resp.content)  # writing content to file
-
         else:
-            print('gros ya r')
             raise errorMSG.grid(column=1, columnspan=2)
         
         done.grid(column=1, columnspan=3)
-        file_name = ''
     except:
         print('ERREUR TOTAL')
         errorMSG.grid(column=1, columnspan=3)
@@ -96,25 +61,22 @@ def convert():
             os.remove(file_path + '/' + file_name.split('.')[0] + '.mp3')
         except:
             return
-        file_name = ''
+    
+    file_name = ''
 
 def combine_files():
     global file_name
     global file_path
-    input_vid = ffmpeg.input(file_path + '/' + 'TEMP' +file_name)
-    input_aud = ffmpeg.input(file_path + '/' + file_name.split('.')[0] + '.mp3')
-    print("la")
+    input_vid = ffmpeg.input(file_path + '/' + 'TEMP' + file_name)
+    input_aud = ffmpeg.input(file_path + '/' + 'TEMP' + file_name.split('.')[0] + '.mp3')
     ffmpeg.concat(input_vid, input_aud, v=1, a=1, unsafe= True)
     
-    print('laaa')
     ffmpeg.output(input_vid.video, input_aud.audio, file_path + '/' + file_name, codec='copy').overwrite_output().run(quiet=True)
 
-    print("on sais pas")
+    os.remove(file_path + '/' + 'TEMP' + file_name)
+    os.remove(file_path + '/' + 'TEMP' + file_name.split('.')[0] + '.mp3')
 
-    os.remove(file_path + '/' + 'TEMP' +file_name)
-    os.remove(file_path + '/' + file_name.split('.')[0] + '.mp3')
-    print('waw')
-    
+
 def savePath():
     global file_name
     global file_path
@@ -131,7 +93,6 @@ def checkOS():
     if operating_sys == 'Linux':
         file_path = str(subprocess.check_output(
             ['xdg-user-dir', 'DESKTOP']).decode('ascii')).rstrip()
-        print(file_path)
     elif operating_sys == 'Windows':
         file_path = 'C:/Users/' + user + '/Desktop'
     elif operating_sys == 'Darwin':
@@ -153,6 +114,7 @@ frm.grid()
 url = StringVar()
 file_path = str()
 file_name = str()
+progress = IntVar()
 operating_sys = platform.system()
 user = os.getlogin()
 forbidden_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
