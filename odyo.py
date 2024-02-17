@@ -1,4 +1,5 @@
 from pytube import YouTube
+from pytube.exceptions import *
 import os
 import platform
 import subprocess
@@ -50,11 +51,23 @@ def convert():
                 video.download(output_path=file_path, filename=file_name)
 
         else:
-            raise errorMSG.grid(column=1, columnspan=2)
+            errorMSG.configure(text='Erreur: Lien invalide !')
+            errorMSG.grid(column=1, columnspan=3)
+            return
         
         done.grid(column=1, columnspan=3)
+    
+    except AgeRestrictedError:
+        errorMSG.configure(text='Erreur: Restriction d\'age !')
+        errorMSG.grid(column=1, columnspan=3)
+    except VideoPrivate:
+        errorMSG.configure(text='Erreur: Vidéo privée !')
+        errorMSG.grid(column=1, columnspan=3)
+    except VideoRegionBlocked:
+        errorMSG.configure(text='Erreur: Vidéo bloquée dans votre région !')
+        errorMSG.grid(column=1, columnspan=3)
     except:
-        print('ERREUR TOTAL')
+        errorMSG.configure(text='Erreur: Vidéo indisponible !')
         errorMSG.grid(column=1, columnspan=3)
         try:
             os.remove(file_path + '/' + 'TEMP' +file_name)
@@ -163,7 +176,7 @@ done = ttk.Label(frm, text='Télechargement Terminé !', foreground='green')
 done.grid_rowconfigure(1, weight=1)
 done.grid_columnconfigure(1, weight=1)
 
-errorMSG = ttk.Label(frm, text='Erreur: Lien invalide !', foreground='red')
+errorMSG = ttk.Label(frm, foreground='red')
 errorMSG.grid_rowconfigure(1, weight=1)
 errorMSG.grid_columnconfigure(1, weight=1)
 
