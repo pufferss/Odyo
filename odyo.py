@@ -22,7 +22,7 @@ def convert():
         global file_name
         global file_path
         if file_name.split('.')[-1] != extension.get().split('.')[-1] and file_name != '':
-            file_name = file_name.split('.')[0] + extension.get()
+            file_name = file_name.split('.')[0] + '.mp4'
         if re.search(".*yout.*", url.get()):
             
             youtube = YouTube(url.get())
@@ -31,7 +31,8 @@ def convert():
                 file_name = youtube.title
                 for k in forbidden_chars:
                     file_name = file_name.replace(k, '')
-                file_name += extension.get()
+                #file_name += extension.get()
+                file_name += '.mp4'
 
             if extension.get() == '.mp4':
                 video = youtube.streams.filter(adaptive=True, file_extension='mp4').first()
@@ -48,7 +49,9 @@ def convert():
                 video = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
 
             
-                video.download(output_path=file_path, filename=file_name)
+                video.download(output_path=file_path, filename='TEMP' + file_name)
+                ffmpeg.input(file_path + '/' + 'TEMP' + file_name).output(file_path + '/' + file_name.split('.')[0] + '.mp3').overwrite_output().run(quiet=True)
+                os.remove(file_path + '/' + 'TEMP' + file_name)
 
         else:
             errorMSG.configure(text='Erreur: Lien invalide !')
@@ -70,8 +73,8 @@ def convert():
         errorMSG.configure(text='Erreur: Vidéo indisponible !')
         errorMSG.grid(column=1, columnspan=3)
         try:
-            os.remove(file_path + '/' + 'TEMP' +file_name)
             os.remove(file_path + '/' + file_name.split('.')[0] + '.mp3')
+            os.remove(file_path + '/' + 'TEMP' + file_name)
         except:
             return
     
@@ -94,10 +97,11 @@ def savePath():
     global file_name
     global file_path
     path = asksaveasfilename(
-        defaultextension=extension.get(), initialdir=file_path, filetypes=[('MP3 & MP4', '*.mp3' '*.mp4')])
+        defaultextension='.mp4', initialdir=file_path, filetypes=[('MP3 & MP4', '*.mp3' '*.mp4')])
     if not path:
         return
     file_path, file_name = os.path.split(path)
+    file_name = file_name.split('.')[0]
     label_path.config(text='Le fichier sera téléchargé vers: ' + file_path)
 
 
@@ -130,7 +134,7 @@ file_name = str()
 progress = IntVar()
 operating_sys = platform.system()
 user = os.getlogin()
-forbidden_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
+forbidden_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*', '.']
 
 checkOS()
 
