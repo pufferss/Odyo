@@ -1,11 +1,14 @@
 from pytube import YouTube
-from pytube.exceptions import *
+from pytube import Playlist
+from pytube.exceptions import AgeRestrictedError
+from pytube.exceptions import VideoPrivate
+from pytube.exceptions import VideoRegionBlocked
 import os
 import platform
 import subprocess
 from tkinter import *
 from tkinter import ttk
-from tkinter.filedialog import asksaveasfilename
+from tkinter.filedialog import askdirectory
 import base64
 import re
 import ffmpeg
@@ -15,49 +18,69 @@ def func_thread():
     th=Thread(target= lambda: convert(), daemon=True)
     th.start()
 
+def odyo_download(youtube):
+    in_progress.grid(column=1, columnspan=3)
+    if extension.get() == '.mp4':
+        video = youtube.streams.filter(adaptive=True, file_extension='mp4').first()
+        video.download(output_path=file_path, filename='TEMP' + file_name)
+        audio = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
+        audio.download(output_path=file_path, filename='TEMP' + file_name.split('.')[0] + '.mp3')
+        combine_files()
+
+    elif extension.get() == '.mp3':
+        video = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
+
+                
+        video.download(output_path=file_path, filename='TEMP' + file_name)
+        input_aud = ffmpeg.input(file_path + '/' + 'TEMP' + file_name)
+        ffmpeg.output(input_aud.audio, file_path + '/' + file_name.split('.')[0] + '.mp3').overwrite_output().run(quiet=True)
+        os.remove(file_path + '/' + 'TEMP' + file_name)
+
+
+
 def convert():
     try:
         done.grid_forget()
         errorMSG.grid_forget()
+        in_progress.grid_forget()
         global file_name
         global file_path
         if file_name.split('.')[-1] != extension.get().split('.')[-1] and file_name != '':
             file_name = file_name.split('.')[0] + '.mp4'
+
+
         if re.search(".*yout.*", url.get()):
+            if re.search(".*playlist.*", url.get()):
+                p = Playlist(url.get())
+                for playlist_video in p.videos:
+                    if not file_name:
+                        file_name = playlist_video.title
+                        for k in forbidden_chars:
+                            file_name = file_name.replace(k, '')
+                        file_name += '.mp4'
+                    odyo_download(playlist_video)
+                    file_name = ''
+
+            else:
+                youtube = YouTube(url.get())
             
-            youtube = YouTube(url.get())
-           
-            if not file_name:
-                file_name = youtube.title
-                for k in forbidden_chars:
-                    file_name = file_name.replace(k, '')
-                #file_name += extension.get()
-                file_name += '.mp4'
+                if not file_name:
+                    file_name = youtube.title
+                    for k in forbidden_chars:
+                        file_name = file_name.replace(k, '')
+                    file_name += '.mp4'
+                
 
-            if extension.get() == '.mp4':
-                video = youtube.streams.filter(adaptive=True, file_extension='mp4').first()
-                if video.resolution != '1080p':
-                    video = youtube.streams.filter(progressive=True,file_extension='mp4').get_highest_resolution()
-                    video.download(output_path=file_path, filename=file_name)
-                else:
-                    video.download(output_path=file_path, filename='TEMP' + file_name)
-                    audio = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
-                    audio.download(output_path=file_path, filename='TEMP' + file_name.split('.')[0] + '.mp3')
-                    combine_files()
+                odyo_download(youtube)
 
-            elif extension.get() == '.mp3':
-                video = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
 
-            
-                video.download(output_path=file_path, filename='TEMP' + file_name)
-                ffmpeg.input(file_path + '/' + 'TEMP' + file_name).output(file_path + '/' + file_name.split('.')[0] + '.mp3').overwrite_output().run(quiet=True)
-                os.remove(file_path + '/' + 'TEMP' + file_name)
 
         else:
             errorMSG.configure(text='Erreur: Lien invalide !')
             errorMSG.grid(column=1, columnspan=3)
             return
         
+        in_progress.grid_forget()
         done.grid(column=1, columnspan=3)
     
     except AgeRestrictedError:
@@ -70,11 +93,11 @@ def convert():
         errorMSG.configure(text='Erreur: Vidéo bloquée dans votre région !')
         errorMSG.grid(column=1, columnspan=3)
     except:
-        errorMSG.configure(text='Erreur: Vidéo indisponible !')
+        errorMSG.configure(text='Erreur: Un problème est survenu !')
         errorMSG.grid(column=1, columnspan=3)
         try:
-            os.remove(file_path + '/' + file_name.split('.')[0] + '.mp3')
             os.remove(file_path + '/' + 'TEMP' + file_name)
+            os.remove(file_path + '/' + file_name.split('.')[0] + '.mp3')
         except:
             return
     
@@ -96,12 +119,10 @@ def combine_files():
 def savePath():
     global file_name
     global file_path
-    path = asksaveasfilename(
-        defaultextension='.mp4', initialdir=file_path, filetypes=[('MP3 & MP4', '*.mp3' '*.mp4')])
+    path = askdirectory(initialdir=file_path, mustexist=True)
     if not path:
         return
-    file_path, file_name = os.path.split(path)
-    file_name = file_name.split('.')[0]
+    file_path = path
     label_path.config(text='Le fichier sera téléchargé vers: ' + file_path)
 
 
@@ -179,6 +200,10 @@ convertir.grid_columnconfigure(1, weight=1)
 done = ttk.Label(frm, text='Télechargement Terminé !', foreground='green')
 done.grid_rowconfigure(1, weight=1)
 done.grid_columnconfigure(1, weight=1)
+
+in_progress = ttk.Label(frm, text='En cours de Téléchargement...', foreground='grey')
+in_progress.grid_rowconfigure(1, weight=1)
+in_progress.grid_columnconfigure(1, weight=1)
 
 errorMSG = ttk.Label(frm, foreground='red')
 errorMSG.grid_rowconfigure(1, weight=1)
