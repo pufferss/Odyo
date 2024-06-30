@@ -84,15 +84,19 @@ def convert():
         done.grid(column=1, columnspan=3)
     
     except AgeRestrictedError:
+        in_progress.grid_forget()
         errorMSG.configure(text='Erreur: Restriction d\'age !')
         errorMSG.grid(column=1, columnspan=3)
     except VideoPrivate:
+        in_progress.grid_forget()
         errorMSG.configure(text='Erreur: Vidéo privée !')
         errorMSG.grid(column=1, columnspan=3)
     except VideoRegionBlocked:
+        in_progress.grid_forget()
         errorMSG.configure(text='Erreur: Vidéo bloquée dans votre région !')
         errorMSG.grid(column=1, columnspan=3)
     except:
+        in_progress.grid_forget()
         errorMSG.configure(text='Erreur: Un problème est survenu !')
         errorMSG.grid(column=1, columnspan=3)
         try:
