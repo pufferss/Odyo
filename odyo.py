@@ -1,8 +1,9 @@
-from pytube import YouTube
-from pytube import Playlist
-from pytube.exceptions import AgeRestrictedError
-from pytube.exceptions import VideoPrivate
-from pytube.exceptions import VideoRegionBlocked
+from pytubefix import YouTube
+from pytubefix import Playlist
+from pytubefix.exceptions import AgeRestrictedError
+from pytubefix.exceptions import VideoPrivate
+from pytubefix.exceptions import VideoRegionBlocked
+
 import os
 import platform
 import subprocess
@@ -19,18 +20,23 @@ def func_thread():
     th.start()
 
 def odyo_download(youtube):
-    in_progress.grid(column=1, columnspan=3)
+    in_progress.grid(column=1, columnspan=4)
     if extension.get() == '.mp4':
-        video = youtube.streams.filter(adaptive=True, file_extension='mp4').first()
-        video.download(output_path=file_path, filename='TEMP' + file_name)
+        
+        if quality.get() == 'Max':
+            video = youtube.streams.filter(subtype='mp4', adaptive=True).first()
+        else:
+            video = youtube.streams.filter(res=quality.get().split(' ')[0], subtype='mp4', adaptive=True).first()
+        print(video)
+
+
+        video.download(output_path=file_path, filename= 'TEMP' + file_name)
         audio = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
-        audio.download(output_path=file_path, filename='TEMP' + file_name.split('.')[0] + '.mp3')
+        audio.download(output_path=file_path, filename= 'TEMP' + file_name.split('.')[0] + '.mp3')
         combine_files()
 
-    elif extension.get() == '.mp3':
+    else:
         video = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
-
-                
         video.download(output_path=file_path, filename='TEMP' + file_name)
         input_aud = ffmpeg.input(file_path + '/' + 'TEMP' + file_name)
         ffmpeg.output(input_aud.audio, file_path + '/' + file_name.split('.')[0] + '.mp3').overwrite_output().run(quiet=True)
@@ -77,24 +83,24 @@ def convert():
 
         else:
             errorMSG.configure(text='Erreur: Lien invalide !')
-            errorMSG.grid(column=1, columnspan=3)
+            errorMSG.grid(column=1, columnspan=4)
             return
         
         in_progress.grid_forget()
-        done.grid(column=1, columnspan=3)
+        done.grid(column=1, columnspan=4)
     
     except AgeRestrictedError:
         in_progress.grid_forget()
         errorMSG.configure(text='Erreur: Restriction d\'age !')
-        errorMSG.grid(column=1, columnspan=3)
+        errorMSG.grid(column=1, columnspan=4)
     except VideoPrivate:
         in_progress.grid_forget()
         errorMSG.configure(text='Erreur: Vidéo privée !')
-        errorMSG.grid(column=1, columnspan=3)
+        errorMSG.grid(column=1, columnspan=4)
     except VideoRegionBlocked:
         in_progress.grid_forget()
         errorMSG.configure(text='Erreur: Vidéo bloquée dans votre région !')
-        errorMSG.grid(column=1, columnspan=3)
+        errorMSG.grid(column=1, columnspan=4)
     except:
         in_progress.grid_forget()
         errorMSG.configure(text='Erreur: Un problème est survenu !')
@@ -164,12 +170,12 @@ forbidden_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*', '.']
 checkOS()
 
 text = ttk.Label(frm, text='Lien de la vidéo:')
-text.grid(column=1, columnspan=3)
+text.grid(column=1, columnspan=4)
 text.grid_rowconfigure(1, weight=1)
 text.grid_columnconfigure(1, weight=1)
 
 
-url_textbox = ttk.Entry(frm, width=45, textvariable=url)
+url_textbox = ttk.Entry(frm, width=40, textvariable=url)
 url_textbox.focus()
 url_textbox.grid(column=1, pady=20, columnspan=2)
 url_textbox.grid_rowconfigure(1, weight=1)
@@ -180,24 +186,34 @@ L_Extension = ['.mp3', '.mp4']
 extension = ttk.Combobox(frm, values=L_Extension,
                          state="readonly", width='5', textvariable=ext)
 extension.current(1)
-extension.grid(column=3, row=1)
+extension.grid(column=4, row=1)
 extension.grid_rowconfigure(1, weight=1)
 extension.grid_columnconfigure(1, weight=1)
 
 
+qual = StringVar()
+L_Quality = ['Max', '4320p (8k)', '2160p (4k)', '1440p (2k)', '1080p', '720p', '480p', '360p', '240p', '144p']
+quality = ttk.Combobox(frm, values=L_Quality,
+                         state="readonly", width='9', textvariable=qual)
+
+quality.current(0)
+quality.grid(column=3, row=1)
+quality.grid_rowconfigure(1, weight=1)
+quality.grid_columnconfigure(1, weight=1)
+
 browse = ttk.Button(frm, text='Parcourir', command=savePath, cursor='hand2')
-browse.grid(column=1, columnspan=3)
+browse.grid(column=1, columnspan=4)
 browse.grid_rowconfigure(1, weight=1)
 browse.grid_columnconfigure(1, weight=1)
 
 label_path = ttk.Label(
     frm, text='Le fichier sera téléchargé vers: ' + file_path)
-label_path.grid(column=1, columnspan=3, pady=7)
+label_path.grid(column=1, columnspan=4, pady=7)
 label_path.grid_rowconfigure(1, weight=1)
 label_path.grid_columnconfigure(1, weight=1)
 
 convertir = ttk.Button(frm, text='Convertir', command=func_thread, cursor='hand2')
-convertir.grid(column=1, columnspan=3)
+convertir.grid(column=1, columnspan=4)
 convertir.grid_rowconfigure(1, weight=1)
 convertir.grid_columnconfigure(1, weight=1)
 
