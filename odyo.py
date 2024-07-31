@@ -33,7 +33,7 @@ def odyo_download(youtube):
                 errorMSG.grid(column=1, columnspan=4)
                 return False
             
-        print(video)
+ 
 
 
         video.download(output_path=file_path, filename= 'TEMP' + file_name)
