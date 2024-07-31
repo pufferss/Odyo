@@ -27,6 +27,12 @@ def odyo_download(youtube):
             video = youtube.streams.filter(subtype='mp4', adaptive=True).first()
         else:
             video = youtube.streams.filter(res=quality.get().split(' ')[0], subtype='mp4', adaptive=True).first()
+            if video == None:
+                in_progress.grid_forget()
+                errorMSG.configure(text='Erreur: Qualité sélectionée non disponible !')
+                errorMSG.grid(column=1, columnspan=4)
+                return False
+            
         print(video)
 
 
@@ -34,6 +40,7 @@ def odyo_download(youtube):
         audio = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
         audio.download(output_path=file_path, filename= 'TEMP' + file_name.split('.')[0] + '.mp3')
         combine_files()
+        return True
 
     else:
         video = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
@@ -41,7 +48,7 @@ def odyo_download(youtube):
         input_aud = ffmpeg.input(file_path + '/' + 'TEMP' + file_name)
         ffmpeg.output(input_aud.audio, file_path + '/' + file_name.split('.')[0] + '.mp3').overwrite_output().run(quiet=True)
         os.remove(file_path + '/' + 'TEMP' + file_name)
-
+        return True
 
 
 def convert():
@@ -51,33 +58,30 @@ def convert():
         in_progress.grid_forget()
         global file_name
         global file_path
-        if file_name.split('.')[-1] != extension.get().split('.')[-1] and file_name != '':
-            file_name = file_name.split('.')[0] + '.mp4'
-
 
         if re.search(".*yout.*", url.get()):
             if re.search(".*playlist.*", url.get()):
                 p = Playlist(url.get())
                 for playlist_video in p.videos:
-                    if not file_name:
-                        file_name = playlist_video.title
-                        for k in forbidden_chars:
-                            file_name = file_name.replace(k, '')
-                        file_name += '.mp4'
-                    odyo_download(playlist_video)
-                    file_name = ''
+                    file_name = playlist_video.title
+                    for k in forbidden_chars:
+                        file_name = file_name.replace(k, '')
+                    file_name += '.mp4'
+
+                    if not odyo_download(playlist_video):
+                        return
 
             else:
                 youtube = YouTube(url.get())
             
-                if not file_name:
-                    file_name = youtube.title
-                    for k in forbidden_chars:
-                        file_name = file_name.replace(k, '')
-                    file_name += '.mp4'
+                file_name = youtube.title
+                for k in forbidden_chars:
+                    file_name = file_name.replace(k, '')
+                file_name += '.mp4'
                 
 
-                odyo_download(youtube)
+                if not odyo_download(youtube):
+                    return
 
 
 
@@ -104,14 +108,14 @@ def convert():
     except:
         in_progress.grid_forget()
         errorMSG.configure(text='Erreur: Un problème est survenu !')
-        errorMSG.grid(column=1, columnspan=3)
+        errorMSG.grid(column=1, columnspan=4)
         try:
             os.remove(file_path + '/' + 'TEMP' + file_name)
             os.remove(file_path + '/' + file_name.split('.')[0] + '.mp3')
         except:
             return
     
-    file_name = ''
+    
 
 def combine_files():
     global file_name
@@ -127,7 +131,6 @@ def combine_files():
 
 
 def savePath():
-    global file_name
     global file_path
     path = askdirectory(initialdir=file_path, mustexist=True)
     if not path:
