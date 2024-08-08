@@ -25,13 +25,19 @@ def odyo_download(youtube):
         
         if quality.get() == 'Max':
             video = youtube.streams.filter(subtype='mp4', adaptive=True).first()
+            if video == None:
+                video = youtube.streams.filter(adaptive=True).first()
+
         else:
             video = youtube.streams.filter(res=quality.get().split(' ')[0], subtype='mp4', adaptive=True).first()
             if video == None:
-                in_progress.grid_forget()
-                errorMSG.configure(text='Erreur: Qualité sélectionée non disponible !')
-                errorMSG.grid(column=1, columnspan=4)
-                return False
+                video = youtube.streams.filter(res=quality.get().split(' ')[0], adaptive=True).first()
+                
+                if video == None:
+                    in_progress.grid_forget()
+                    errorMSG.configure(text='Erreur: Qualité sélectionée non disponible !')
+                    errorMSG.grid(column=1, columnspan=4)
+                    return False
             
  
 
