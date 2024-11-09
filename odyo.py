@@ -7,9 +7,15 @@ from pytubefix.exceptions import VideoRegionBlocked
 import os
 import platform
 import subprocess
-from tkinter import *
+'''from tkinter import *
 from tkinter import ttk
+from tkinter.filedialog import askdirectory'''
+from tkinter import PhotoImage
 from tkinter.filedialog import askdirectory
+
+import customtkinter as ctk
+from tempfile import NamedTemporaryFile
+
 import base64
 import re
 import ffmpeg
@@ -20,67 +26,65 @@ def func_thread():
     th.start()
 
 def odyo_download(youtube):
-    in_progress.grid(column=1, columnspan=4)
-    if extension.get() == '.mp4':
+    app.in_progress.grid(column=1, columnspan=4)
+    if app.extension.get() == '.mp4':
         
-        if quality.get() == 'Max':
+        if app.quality.get() == 'Max':
             video = youtube.streams.get_highest_resolution(False)
 
         else:
-            video = youtube.streams.filter(res=quality.get().split(' ')[0], subtype='mp4', adaptive=True).first()
+            video = youtube.streams.filter(res=app.quality.get().split(' ')[0], subtype='mp4', adaptive=True).first()
             if video == None:
-                video = youtube.streams.filter(res=quality.get().split(' ')[0], adaptive=True).first()
+                video = youtube.streams.filter(res=app.quality.get().split(' ')[0], adaptive=True).first()
                 if video == None:
-                    in_progress.grid_forget()
-                    errorMSG.configure(text='Erreur: Qualité sélectionée non disponible !')
-                    errorMSG.grid(column=1, columnspan=4)
+                    app.in_progress.grid_forget()
+                    app.errorMSG.configure(text='Erreur: Qualité sélectionée non disponible !')
+                    app.errorMSG.grid(column=1, columnspan=4)
                     return False
             
  
 
 
-        video.download(output_path=file_path, filename= 'TEMP' + file_name)
+        video.download(output_path=app.file_path, filename= 'TEMP' + app.file_name)
         audio = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
-        audio.download(output_path=file_path, filename= 'TEMP' + file_name.split('.')[0] + '.mp3')
+        audio.download(output_path=app.file_path, filename= 'TEMP' + app.file_name.split('.')[0] + '.mp3')
         combine_files()
         return True
 
     else:
         video = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
-        video.download(output_path=file_path, filename='TEMP' + file_name)
-        input_aud = ffmpeg.input(file_path + '/' + 'TEMP' + file_name)
-        ffmpeg.output(input_aud.audio, file_path + '/' + file_name.split('.')[0] + '.mp3').overwrite_output().run(quiet=True)
-        os.remove(file_path + '/' + 'TEMP' + file_name)
+        video.download(output_path=app.file_path, filename='TEMP' + app.file_name)
+        input_aud = ffmpeg.input(app.file_path + '/' + 'TEMP' + app.file_name)
+        ffmpeg.output(input_aud.audio, app.file_path + '/' + app.file_name.split('.')[0] + '.mp3').overwrite_output().run(quiet=True)
+        os.remove(app.file_path + '/' + 'TEMP' + app.file_name)
         return True
 
 
 def convert():
     try:
-        done.grid_forget()
-        errorMSG.grid_forget()
-        in_progress.grid_forget()
-        global file_name
-        global file_path
+        app.done.grid_forget()
+        app.errorMSG.grid_forget()
+        app.in_progress.grid_forget()
 
-        if re.search(".*yout.*", url.get()):
-            if re.search(".*playlist.*", url.get()):
-                p = Playlist(url.get())
+        if re.search(".*yout.*", app.url.get()):
+            if re.search(".*playlist.*", app.url.get()):
+                p = Playlist(app.url.get())
                 for playlist_video in p.videos:
-                    file_name = playlist_video.title
-                    for k in forbidden_chars:
-                        file_name = file_name.replace(k, '')
-                    file_name += '.mp4'
+                    app.file_name = playlist_video.title
+                    for k in app.forbidden_chars:
+                        app.file_name = app.file_name.replace(k, '')
+                    app.file_name += '.mp4'
 
                     if not odyo_download(playlist_video):
                         return
 
             else:
-                youtube = YouTube(url.get())
+                youtube = YouTube(app.url.get())
             
-                file_name = youtube.title
-                for k in forbidden_chars:
-                    file_name = file_name.replace(k, '')
-                file_name += '.mp4'
+                app.file_name = youtube.title
+                for k in app.forbidden_chars:
+                    app.file_name = app.file_name.replace(k, '')
+                app.file_name += '.mp4'
                 
 
                 if not odyo_download(youtube):
@@ -89,150 +93,185 @@ def convert():
 
 
         else:
-            errorMSG.configure(text='Erreur: Lien invalide !')
-            errorMSG.grid(column=1, columnspan=4)
+            app.errorMSG.configure(text='Erreur: Lien invalide !')
+            app.errorMSG.grid(column=1, columnspan=4)
             return
         
-        in_progress.grid_forget()
-        done.grid(column=1, columnspan=4)
+        app.in_progress.grid_forget()
+        app.done.grid(column=1, columnspan=4)
     
     except AgeRestrictedError:
-        in_progress.grid_forget()
-        errorMSG.configure(text='Erreur: Restriction d\'age !')
-        errorMSG.grid(column=1, columnspan=4)
+        app.in_progress.grid_forget()
+        app.errorMSG.configure(text='Erreur: Restriction d\'age !')
+        app.errorMSG.grid(column=1, columnspan=4)
     except VideoPrivate:
-        in_progress.grid_forget()
-        errorMSG.configure(text='Erreur: Vidéo privée !')
-        errorMSG.grid(column=1, columnspan=4)
+        app.in_progress.grid_forget()
+        app.errorMSG.configure(text='Erreur: Vidéo privée !')
+        app.errorMSG.grid(column=1, columnspan=4)
     except VideoRegionBlocked:
-        in_progress.grid_forget()
-        errorMSG.configure(text='Erreur: Vidéo bloquée dans votre région !')
-        errorMSG.grid(column=1, columnspan=4)
+        app.in_progress.grid_forget()
+        app.errorMSG.configure(text='Erreur: Vidéo bloquée dans votre région !')
+        app.errorMSG.grid(column=1, columnspan=4)
     except:
-        in_progress.grid_forget()
-        errorMSG.configure(text='Erreur: Un problème est survenu !')
-        errorMSG.grid(column=1, columnspan=4)
+        app.in_progress.grid_forget()
+        app.errorMSG.configure(text='Erreur: Un problème est survenu !')
+        app.errorMSG.grid(column=1, columnspan=4)
         try:
-            os.remove(file_path + '/' + 'TEMP' + file_name)
-            os.remove(file_path + '/' + file_name.split('.')[0] + '.mp3')
+            os.remove(app.file_path + '/' + 'TEMP' + app.file_name)
+            os.remove(app.file_path + '/' + app.file_name.split('.')[0] + '.mp3')
         except:
             return
     
     
 
 def combine_files():
-    global file_name
-    global file_path
-    input_vid = ffmpeg.input(file_path + '/' + 'TEMP' + file_name)
-    input_aud = ffmpeg.input(file_path + '/' + 'TEMP' + file_name.split('.')[0] + '.mp3')
+    input_vid = ffmpeg.input(app.file_path + '/' + 'TEMP' + app.file_name)
+    input_aud = ffmpeg.input(app.file_path + '/' + 'TEMP' + app.file_name.split('.')[0] + '.mp3')
     ffmpeg.concat(input_vid, input_aud, v=1, a=1, unsafe= True)
     
-    ffmpeg.output(input_vid.video, input_aud.audio, file_path + '/' + file_name, codec='copy').overwrite_output().run(quiet=True)
+    ffmpeg.output(input_vid.video, input_aud.audio, app.file_path + '/' + app.file_name, codec='copy').overwrite_output().run(quiet=True)
 
-    os.remove(file_path + '/' + 'TEMP' + file_name)
-    os.remove(file_path + '/' + 'TEMP' + file_name.split('.')[0] + '.mp3')
+    os.remove(app.file_path + '/' + 'TEMP' + app.file_name)
+    os.remove(app.file_path + '/' + 'TEMP' + app.file_name.split('.')[0] + '.mp3')
 
 
 def savePath():
-    global file_path
-    path = askdirectory(initialdir=file_path, mustexist=True)
+    path = askdirectory(initialdir=app.file_path, mustexist=True)
     if not path:
         return
-    file_path = path
-    label_path.config(text='Le fichier sera téléchargé vers: ' + file_path)
-
+    app.file_path = path
+    app.label_path.configure(text='Le fichier sera téléchargé vers: ' + app.file_path)
 
 def checkOS():
-    global file_path
-    if operating_sys == 'Linux':
-        file_path = str(subprocess.check_output(
+    if app.operating_sys == 'Linux':
+        app.file_path = str(subprocess.check_output(
             ['xdg-user-dir', 'DESKTOP']).decode('ascii')).rstrip()
-    elif operating_sys == 'Windows':
-        file_path = 'C:/Users/' + user + '/Desktop'
-    elif operating_sys == 'Darwin':
-        file_path = '~/Desktop'
+        app.label_path.configure(text='Le fichier sera téléchargé vers: ' + app.file_path)
+
+    elif app.operating_sys == 'Windows':
+        app.file_path = 'C:/Users/' + app.user + '/Desktop'
+        app.label_path.configure(text='Le fichier sera téléchargé vers: ' + app.file_path)
+
+    elif app.operating_sys == 'Darwin':
+        app.file_path = '~/Desktop'
+        app.label_path.configure(text='Le fichier sera téléchargé vers: ' + app.file_path)
 
 
-window = Tk(className='Odyo Downloader')
-window.geometry('500x300')
-window.resizable(False, False)
-window.title('ODYO Downloader')
-icon = 'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAA3NpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDYuMC1jMDA1IDc5LjE2NDU5MCwgMjAyMC8xMi8wOS0xMTo1Nzo0NCAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wTU09Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9tbS8iIHhtbG5zOnN0UmVmPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvc1R5cGUvUmVzb3VyY2VSZWYjIiB4bWxuczp4bXA9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC8iIHhtcE1NOk9yaWdpbmFsRG9jdW1lbnRJRD0ieG1wLmRpZDoxOTEwZTQzNS05OTI0LTc4NDEtODFhMi1lYjYzZTAxZjkyZGIiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6NzFGN0VBRDVCNThGMTFFRUEyMTNFREExNTQzNDEwRUMiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6NzFGN0VBRDRCNThGMTFFRUEyMTNFREExNTQzNDEwRUMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIDIyLjEgKFdpbmRvd3MpIj4gPHhtcE1NOkRlcml2ZWRGcm9tIHN0UmVmOmluc3RhbmNlSUQ9InhtcC5paWQ6MTkxMGU0MzUtOTkyNC03ODQxLTgxYTItZWI2M2UwMWY5MmRiIiBzdFJlZjpkb2N1bWVudElEPSJ4bXAuZGlkOjE5MTBlNDM1LTk5MjQtNzg0MS04MWEyLWViNjNlMDFmOTJkYiIvPiA8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'
-icon = PhotoImage(data=base64.b64decode(icon))
-window.wm_iconphoto(True, icon)
-window.grid_rowconfigure(0, weight=1)
-window.grid_columnconfigure(0, weight=1)
-frm = ttk.Frame(window)
-frm.grid()
 
-url = StringVar()
-file_path = str()
-file_name = str()
-progress = IntVar()
-operating_sys = platform.system()
-user = os.getlogin()
-forbidden_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*', '.']
 
+
+class App(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.geometry('500x300')
+        self.minsize(500, 300)
+        self.title('ODYO Downloader')
+        ctk.set_appearance_mode("system")      # Modes: "light", "dark", "system"
+        ctk.set_default_color_theme("dark-blue")  # Themes: "blue", "green", "dark-blue"
+
+
+        self.url = ctk.StringVar()
+        self.file_path = str()
+        self.file_name = str()
+        self.progress = ctk.IntVar()
+        self.operating_sys = platform.system()
+        self.user = os.getlogin()
+        self.forbidden_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*', '.']
+        self.ext = ctk.StringVar()
+        self.qual = ctk.StringVar()
+        self.my_font = ctk.CTkFont("Microsoft Sans Serif")
+        self.icon = 'AAABAAIAICAAAAEAIACoEAAAJgAAACAgAAABAAQA6AIAAM4QAAAoAAAAIAAAAEAAAAABACAAAAAAAIAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4dXwAeHV8AHh1fAB4dXwAeHV8oHh1fhB4dX80eHV/0Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV/0Hh1fzx4dX4ceHV8rHh1fAB4dXwAeHV8AHh1fAAAAAAAeHV8AHh1fAB4dXwAeHV8LHh1fgR4dX+oeHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX+weHV+FHh1fDR4dXwAeHV8AHh1fAB4dXwAeHV8AHh1fFx4dX7keHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV+/Hh1fGx4dXwAeHV8AHh1fAB4dXwoeHV+5Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV+/Hh1fDR4dXwAeHV8AHh1ffx4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHF//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV+FHh1fAB4dXyUeHV/pHh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Ghlc/xkYXP8gH2D/Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX+0eHV8rHh1ffx4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/xoZXP85OXP/np24/y8va/8YF1v/FhVa/xoZXP8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX4geHV/KHh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//FBNZ/5iYtP+VlLL/DQxU/2Jhj/+ZmLX/Li1r/xgXW/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f0B4dX/MeHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8aGl3/eXmd/ysqaf8lJGT/19bg///////g4Of/VVWG/xYVWv8XFlv/HRxe/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV/1Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8iImP/ERBX/46Nrf////3/+vr4/+zs7/8/Pnb/Hx5g/0tLf/8ZGFz/GBdb/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/xQTWf9GRXv/7+/x//n5+P/+/vz/eXmf/wgHUf9nZpL/+fn4/6urwv9BQHj/HBte/x0cX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8bGl3/JiVl/8fH1f/9/fv////9/6+uxP8VFVr/KShn/9XV3//9/fv//////6yswv8ZGFz/FxZb/xYVWv8cG17/Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/xUUWf+Ih6n////+/////P/Kytf/Jydm/xQUWf+srML////8//z8+v/Z2eL/MzJu/xUVWv+Rka//c3Kb/yEhYv8dHF7/Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//FRRZ/5+fuP//////09Ld/zMybv8NDFT/i4us//39/P/6+vn/7+/x/01Ngf8KCVL/eXmf/////f//////ioqq/xUVWv8WFVr/Ghlc/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8VFFn/o6O8/8vL2P8xMG3/CglS/3l4nv/7+/n/+vr4//v7+f9wb5j/CQlS/1JRg//y8vP//Pz6//Hx8/9JSH7/FxZb/3h3nf82NXD/Gxld/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/xwbXv9PT4H/JSVl/w8OVv93d57/9vb2//v7+f/7+/r/g4Kl/w0MVP8zM2//3Nzk//z8+v////3/jo2t/woKUv9aWon//////7Gxxv8YF1v/HRxf/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hx5f/xIRV/8fHmD/mpq2//v7+v/8/Pr/+vr4/359ov8ODVX/JiZm/8bG1P/+/vz////8/8XE0/8eHWD/JCNk/9TU3v//////tbXJ/xgXXP8dHF//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8aGVz/QkF5/8jI1f/+/vz//Pz6//Pz9P9ubZf/DQtU/ygoZ/+/v8/////8//z8+v/d3eX/Nzdx/w4NVf+iobv////+/6ysw/81NW//Ghld/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/xUUWf+enrj///////7++//o6O3/X1+N/wkJUv82NnD/y8vY/////P/9/fv/4+Pp/0dHfP8ODVX/cnKa/8vL2P9ZWIj/FxZa/xkYXP8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//FRRZ/6Cguf//////xcTU/0FAeP8JCFH/QkJ5/9jY4f////z////8/9zc5P9GRXv/ERBX/0VEev9vbpf/IiJj/xUUWf8dHF//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8XFlr/j4+t/46Orf8cHF//DAtU/11di//k5Or//v77/////f/JyNb/ODhy/xUUWf8fHl//JyZl/xgXXP8cG13/Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8kI2P/DAxU/yUkZP+WlrT/9/f2//7+/P/8/Pr/o6O8/yYlZf8XFlr/Hh1f/x4dX/8dHF7/Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//HRxe/xsaXv9gYI3/1NTe/////f////3/6uru/3Jxmv8XFlv/Ghlc/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/MeHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8WFVr/h4ao//7+/P////z//v78/8DA0P9AP3f/ExJY/x0cXv8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV/0Hh1fyR4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/xQTWf+YmLT//////+np7f99faL/Hh1f/xcWWv8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX84eHV99Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Ghlc/z4+dv+enrj/QUB3/xMSWP8cG17/Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1fhR4dXyMeHV/nHh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Ghpd/xUUWf8ZGFv/Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX+seHV8pHh1fAB4dX3oeHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1fgR4dXwAeHV8AHh1fCB4dX7MeHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX7oeHV8KHh1fAB4dXwAeHV8AHh1fFB4dX7MeHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV+4Hh1fFx4dXwAeHV8AHh1fAB4dXwAeHV8AHh1fCB4dX3oeHV/nHh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV/oHh1ffh4dXwoeHV8AHh1fAB4dXwAAAAAAHh1fAB4dXwAeHV8AHh1fAB4dXyMeHV98Hh1fyB4dX/IeHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/8eHV//Hh1f/x4dX/IeHV/KHh1ffx4dXyUeHV8AHh1fAB4dXwAeHV8AAAAAAB8AAPgHAADgAwAAwAEAAIABAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAIABAACAAwAAwAcAAOAfAAD4KAAAACAAAABAAAAAAQAEAAAAAADAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAACJiar/Hh1fwt7e5f9FRHv/Hh1fgRMSWP+ursT/Hh1fAm1slv8eHV///Pz7/zEwbf8eHV8inZy3/8fH1f8IiI1Sqqqqqqqqqqol2IiAiIhaqqqqqqqqqqqqqqWIiIiCqqqqqqqqqqqqqqqqLYiIKqqqqqqqqqqqqqqqqqKIhaqqqqqqqqqqqqqqqqqqWNqqqqpqqqqqqqqqqqqqqq1aqqqmTsZqqqqqqqqqqqqlKqqqpuFpHKqqqqqqqqqqoqqqqqoaw7NKaqqqqqqqqqqqqqqqphu7ykZqqqqqqqqqqqqqqmS7uWm3Rqqqqqqqqqqqqqqvu3bDu3qmqqqqqqqqqqqmG7/Ge7PKGcqqqqqqqqqqpuv8Ybs0absWZqqqqqqqqqZ/xpu7lku7ShyqqqqqqqqqTGm7sWw7sWS3qqqqqqqqqmrru5avu/qjt6qqqqqqqqpPuzls+7PG63yqqqqqqqqm67OWz7s0aflmqqqqqqqqquv0bDuzRkmmqqqqqqqqqqYRppO7/GrGqqqqqqqqqqqqpq67vqqqqqqqqqqqqqqqqmn7s5qqqqqqqqqqqqqqqqYbu/Rqqqqqqqqqqqoqqqqm6zFmqqqqqqqqqqqiWqqqqk5GqqqqqqqqqqqqpdKqqqqmqqqqqqqqqqqqqq2FqqqqqqqqqqqqqqqqqqpYiCqqqqqqqqqqqqqqqqqiiIjSqqqqqqqqqqqqqqqqKIiIiFqqqqqqqqqqqqqqpYiICIiNUqqqqqqqqqqqJdiIgB8AAPgHAADgAwAAwAEAAIABAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAIABAACAAwAAwAcAAOAfAAD4'
+        self.icon_path = 'C:\\Users\\' + os.getlogin() + '\AppData\Local\Temp\\tmpOdyo.ico'
+        
+        frm = ctk.CTkFrame(self, fg_color=self.cget("bg"))
+        frm.grid()
+
+        with open(self.icon_path, 'wb') as file:
+            file.write(base64.b64decode(self.icon))
+        self.iconbitmap(self.icon_path)
+        os.remove(self.icon_path)
+
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
+        
+        self.text = ctk.CTkLabel(frm, text='Lien de la vidéo:', 
+                                 font=("Microsoft Sans Serif", 17))
+        self.text.grid(column=1, columnspan=4)
+        self.text.grid_rowconfigure(1, weight=1)
+        self.text.grid_columnconfigure(1, weight=1)
+
+        self.url_textbox = ctk.CTkEntry(frm, width=300, 
+                                        text_color='black',
+                                        textvariable=self.url, 
+                                        fg_color="white",
+                                        font=("Microsoft Sans Serif", 14))
+        self.url_textbox.focus()
+        self.url_textbox.grid(column=1, pady=20, columnspan=2)
+        self.url_textbox.grid_rowconfigure(1, weight=1)
+        self.url_textbox.grid_columnconfigure(1, weight=1)
+
+        self.L_extension = ['.mp3', '.mp4']
+        self.extension = ctk.CTkComboBox(frm, values=self.L_extension,
+                         state="readonly", width=70, variable=self.ext, font=("Microsoft Sans Serif", 14))
+        self.extension.set(self.L_extension[1])
+        self.extension.grid(column=4, row=1)
+        self.extension.grid_rowconfigure(1, weight=1)
+        self.extension.grid_columnconfigure(1, weight=1)
+
+        self.L_Quality = ['Max', '4320p (8k)', '2160p (4k)', '1440p (2k)', '1080p', '720p', '480p', '360p', '240p', '144p']
+        self.quality = ctk.CTkComboBox(frm, values=self.L_Quality,
+                                state="readonly", 
+                                width=107, variable=self.qual,
+                                font=("Microsoft Sans Serif", 14))
+
+        self.quality.set(self.L_Quality[0])
+        self.quality.grid(column=3, row=1)
+        self.quality.grid_rowconfigure(1, weight=1)
+        self.quality.grid_columnconfigure(1, weight=1)
+
+        self.browse = ctk.CTkButton(frm, text='Parcourir',
+                                     command=savePath, font=("Microsoft Sans Serif", 15))
+        self.browse.grid(column=1, columnspan=4)
+        self.browse.grid_rowconfigure(1, weight=1)
+        self.browse.grid_columnconfigure(1, weight=1)
+
+        self.label_path = ctk.CTkLabel(
+            frm, text='Le fichier sera téléchargé vers: ' + self.file_path,
+              font=("Microsoft Sans Serif", 14))
+        self.label_path.grid(column=1, columnspan=4, pady=7)
+        self.label_path.grid_rowconfigure(1, weight=1)
+        self.label_path.grid_columnconfigure(1, weight=1)
+
+
+        self.convertir = ctk.CTkButton(frm, text='Convertir', 
+                                       command=func_thread, font=("Microsoft Sans Serif", 15))
+        self.convertir.grid(column=1, columnspan=4)
+        self.convertir.grid_rowconfigure(1, weight=1)
+        self.convertir.grid_columnconfigure(1, weight=1)
+
+        self.done = ctk.CTkLabel(frm, text='Télechargement Terminé !', text_color='green', font=self.my_font)
+        self.done.grid_rowconfigure(1, weight=1)
+        self.done.grid_columnconfigure(1, weight=1)
+
+        self.in_progress = ctk.CTkLabel(frm, text='En cours de Téléchargement...', text_color='grey', font=self.my_font)
+        self.in_progress.grid_rowconfigure(1, weight=1)
+        self.in_progress.grid_columnconfigure(1, weight=1)
+
+        self.errorMSG = ctk.CTkLabel(frm, text_color='red', font=self.my_font)
+        self.errorMSG.grid_rowconfigure(1, weight=1)
+        self.errorMSG.grid_columnconfigure(1, weight=1)
+
+    def button_callbck(self):
+        print("button clicked")
+
+
+
+
+
+
+
+app = App()
 checkOS()
 
-text = ttk.Label(frm, text='Lien de la vidéo:')
-text.grid(column=1, columnspan=4)
-text.grid_rowconfigure(1, weight=1)
-text.grid_columnconfigure(1, weight=1)
-
-
-url_textbox = ttk.Entry(frm, width=40, textvariable=url)
-url_textbox.focus()
-url_textbox.grid(column=1, pady=20, columnspan=2)
-url_textbox.grid_rowconfigure(1, weight=1)
-url_textbox.grid_columnconfigure(1, weight=1)
-
-ext = StringVar()
-L_Extension = ['.mp3', '.mp4']
-extension = ttk.Combobox(frm, values=L_Extension,
-                         state="readonly", width='5', textvariable=ext)
-extension.current(1)
-extension.grid(column=4, row=1)
-extension.grid_rowconfigure(1, weight=1)
-extension.grid_columnconfigure(1, weight=1)
-
-
-qual = StringVar()
-L_Quality = ['Max', '4320p (8k)', '2160p (4k)', '1440p (2k)', '1080p', '720p', '480p', '360p', '240p', '144p']
-quality = ttk.Combobox(frm, values=L_Quality,
-                         state="readonly", width='9', textvariable=qual)
-
-quality.current(0)
-quality.grid(column=3, row=1)
-quality.grid_rowconfigure(1, weight=1)
-quality.grid_columnconfigure(1, weight=1)
-
-browse = ttk.Button(frm, text='Parcourir', command=savePath, cursor='hand2')
-browse.grid(column=1, columnspan=4)
-browse.grid_rowconfigure(1, weight=1)
-browse.grid_columnconfigure(1, weight=1)
-
-label_path = ttk.Label(
-    frm, text='Le fichier sera téléchargé vers: ' + file_path)
-label_path.grid(column=1, columnspan=4, pady=7)
-label_path.grid_rowconfigure(1, weight=1)
-label_path.grid_columnconfigure(1, weight=1)
-
-convertir = ttk.Button(frm, text='Convertir', command=func_thread, cursor='hand2')
-convertir.grid(column=1, columnspan=4)
-convertir.grid_rowconfigure(1, weight=1)
-convertir.grid_columnconfigure(1, weight=1)
-
-done = ttk.Label(frm, text='Télechargement Terminé !', foreground='green')
-done.grid_rowconfigure(1, weight=1)
-done.grid_columnconfigure(1, weight=1)
-
-in_progress = ttk.Label(frm, text='En cours de Téléchargement...', foreground='grey')
-in_progress.grid_rowconfigure(1, weight=1)
-in_progress.grid_columnconfigure(1, weight=1)
-
-errorMSG = ttk.Label(frm, foreground='red')
-errorMSG.grid_rowconfigure(1, weight=1)
-errorMSG.grid_columnconfigure(1, weight=1)
-
-window.mainloop()
+app.mainloop()
