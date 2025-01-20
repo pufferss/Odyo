@@ -3,23 +3,16 @@ from pytubefix import Playlist
 from pytubefix.exceptions import AgeRestrictedError
 from pytubefix.exceptions import VideoPrivate
 from pytubefix.exceptions import VideoRegionBlocked
-
 import os
 import platform
 import subprocess
-'''from tkinter import *
-from tkinter import ttk
-from tkinter.filedialog import askdirectory'''
-from tkinter import PhotoImage
 from tkinter.filedialog import askdirectory
-
 import customtkinter as ctk
-from tempfile import NamedTemporaryFile
-
 import base64
 import re
 import ffmpeg
 from threading import Thread
+from datetime import datetime
 
 def func_thread():
     th=Thread(target= lambda: convert(), daemon=True)
@@ -41,16 +34,12 @@ def odyo_download(youtube):
                     app.errorMSG.configure(text='Erreur: Qualité sélectionée non disponible !')
                     app.errorMSG.grid(column=1, columnspan=4)
                     return False
-            
- 
-
 
         video.download(output_path=app.file_path, filename= 'TEMP' + app.file_name)
         audio = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
         audio.download(output_path=app.file_path, filename= 'TEMP' + app.file_name.split('.')[0] + '.mp3')
         combine_files()
         return True
-
     else:
         video = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
         video.download(output_path=app.file_path, filename='TEMP' + app.file_name)
@@ -59,13 +48,11 @@ def odyo_download(youtube):
         os.remove(app.file_path + '/' + 'TEMP' + app.file_name)
         return True
 
-
 def convert():
     try:
         app.done.grid_forget()
         app.errorMSG.grid_forget()
         app.in_progress.grid_forget()
-
         if re.search(".*yout.*", app.url.get()):
             if re.search(".*playlist.*", app.url.get()):
                 p = Playlist(app.url.get())
@@ -77,60 +64,48 @@ def convert():
 
                     if not odyo_download(playlist_video):
                         return
-
             else:
                 youtube = YouTube(app.url.get())
-            
                 app.file_name = youtube.title
                 for k in app.forbidden_chars:
                     app.file_name = app.file_name.replace(k, '')
                 app.file_name += '.mp4'
-                
-
                 if not odyo_download(youtube):
                     return
-
-
-
         else:
             app.errorMSG.configure(text='Erreur: Lien invalide !')
             app.errorMSG.grid(column=1, columnspan=4)
             return
-        
         app.in_progress.grid_forget()
         app.done.grid(column=1, columnspan=4)
     
     except AgeRestrictedError:
-        app.in_progress.grid_forget()
-        app.errorMSG.configure(text='Erreur: Restriction d\'age !')
-        app.errorMSG.grid(column=1, columnspan=4)
+        PushErrorMsg('Erreur: Restriction d\'age !')
     except VideoPrivate:
-        app.in_progress.grid_forget()
-        app.errorMSG.configure(text='Erreur: Vidéo privée !')
-        app.errorMSG.grid(column=1, columnspan=4)
+        PushErrorMsg('Erreur: Vidéo privée !')
     except VideoRegionBlocked:
-        app.in_progress.grid_forget()
-        app.errorMSG.configure(text='Erreur: Vidéo bloquée dans votre région !')
-        app.errorMSG.grid(column=1, columnspan=4)
-    except:
-        app.in_progress.grid_forget()
-        app.errorMSG.configure(text='Erreur: Un problème est survenu !')
-        app.errorMSG.grid(column=1, columnspan=4)
+        PushErrorMsg('Erreur: Vidéo bloquée dans votre région !')
+    except Exception as e:
+        PushErrorMsg(f'Erreur: Un problème est survenu ! (Error : {type(e).__name__}. More details in errors.log)')
+        with open('errors.log', 'a') as file:
+            dt = datetime.now()
+            file.write(f"{dt.strftime('%d/%m/%Y - %H:%M:%S')} | {type(e).__name__}: {str(e)}\n")
         try:
             os.remove(app.file_path + '/' + 'TEMP' + app.file_name)
             os.remove(app.file_path + '/' + app.file_name.split('.')[0] + '.mp3')
         except:
             return
-    
-    
+
+def PushErrorMsg(m):
+    app.in_progress.grid_forget()
+    app.errorMSG.configure(text=m)
+    app.errorMSG.grid(column=1, columnspan=4)
 
 def combine_files():
     input_vid = ffmpeg.input(app.file_path + '/' + 'TEMP' + app.file_name)
     input_aud = ffmpeg.input(app.file_path + '/' + 'TEMP' + app.file_name.split('.')[0] + '.mp3')
     ffmpeg.concat(input_vid, input_aud, v=1, a=1, unsafe= True)
-    
     ffmpeg.output(input_vid.video, input_aud.audio, app.file_path + '/' + app.file_name, codec='copy').overwrite_output().run(quiet=True)
-
     os.remove(app.file_path + '/' + 'TEMP' + app.file_name)
     os.remove(app.file_path + '/' + 'TEMP' + app.file_name.split('.')[0] + '.mp3')
 
@@ -156,10 +131,6 @@ def checkOS():
         app.file_path = '~/Desktop'
         app.label_path.configure(text='Le fichier sera téléchargé vers: ' + app.file_path)
 
-
-
-
-
 class App(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -168,7 +139,6 @@ class App(ctk.CTk):
         self.title('ODYO Downloader')
         ctk.set_appearance_mode("system")      # Modes: "light", "dark", "system"
         ctk.set_default_color_theme("dark-blue")  # Themes: "blue", "green", "dark-blue"
-
 
         self.url = ctk.StringVar()
         self.file_path = str()
@@ -194,7 +164,6 @@ class App(ctk.CTk):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        
         self.text = ctk.CTkLabel(frm, text='Lien de la vidéo:', 
                                  font=("Microsoft Sans Serif", 17))
         self.text.grid(column=1, columnspan=4)
@@ -243,7 +212,6 @@ class App(ctk.CTk):
         self.label_path.grid_rowconfigure(1, weight=1)
         self.label_path.grid_columnconfigure(1, weight=1)
 
-
         self.convertir = ctk.CTkButton(frm, text='Convertir', 
                                        command=func_thread, font=("Microsoft Sans Serif", 15))
         self.convertir.grid(column=1, columnspan=4)
@@ -262,16 +230,6 @@ class App(ctk.CTk):
         self.errorMSG.grid_rowconfigure(1, weight=1)
         self.errorMSG.grid_columnconfigure(1, weight=1)
 
-    def button_callbck(self):
-        print("button clicked")
-
-
-
-
-
-
-
 app = App()
 checkOS()
-
 app.mainloop()
