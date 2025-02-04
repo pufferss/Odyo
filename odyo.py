@@ -65,7 +65,7 @@ def convert():
                     if not odyo_download(playlist_video):
                         return
             else:
-                youtube = YouTube(app.url.get())
+                youtube = YouTube(app.url.get(), 'WEB')
                 app.file_name = youtube.title
                 for k in app.forbidden_chars:
                     app.file_name = app.file_name.replace(k, '')
