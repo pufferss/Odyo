@@ -44,7 +44,7 @@ def odyo_download(youtube):
         video = youtube.streams.filter(only_audio=True, file_extension='mp4', adaptive=True).order_by('codecs').first()
         video.download(output_path=app.file_path, filename='TEMP' + app.file_name)
         input_aud = ffmpeg.input(app.file_path + '/' + 'TEMP' + app.file_name)
-        ffmpeg.output(input_aud.audio, app.file_path + '/' + app.file_name.split('.')[0] + '.mp3').overwrite_output().run(quiet=True)
+        ffmpeg.output(input_aud.audio, app.file_path + '/' + app.file_name.split('.')[0] + '.mp3').overwrite_output().run()
         os.remove(app.file_path + '/' + 'TEMP' + app.file_name)
         return True
 
@@ -105,7 +105,7 @@ def combine_files():
     input_vid = ffmpeg.input(app.file_path + '/' + 'TEMP' + app.file_name)
     input_aud = ffmpeg.input(app.file_path + '/' + 'TEMP' + app.file_name.split('.')[0] + '.mp3')
     ffmpeg.concat(input_vid, input_aud, v=1, a=1, unsafe= True)
-    ffmpeg.output(input_vid.video, input_aud.audio, app.file_path + '/' + app.file_name, codec='copy').overwrite_output().run(quiet=True)
+    ffmpeg.output(input_vid.video, input_aud.audio, app.file_path + '/' + app.file_name, codec='copy').overwrite_output().run()
     os.remove(app.file_path + '/' + 'TEMP' + app.file_name)
     os.remove(app.file_path + '/' + 'TEMP' + app.file_name.split('.')[0] + '.mp3')
 
